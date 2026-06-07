@@ -6,3 +6,7 @@ attrs
 paho-mqtt
 pyotp
 requests
+attrs
+paho-mqtt
+pyotp
+requests
