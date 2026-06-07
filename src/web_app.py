@@ -5,6 +5,7 @@ Flask server for the message-sender web interface.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import queue
@@ -41,6 +42,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET", secrets.token_hex(32))
 
 CONFIG_PATH = HERE / "config.json"
+ACCOUNTS_PATH = HERE / "accounts.json"
 
 # ── Config helpers ───────────────────────────────────────────────────────
 
@@ -54,6 +56,28 @@ def load_config() -> dict:
 def save_config(cfg: dict) -> None:
     with CONFIG_PATH.open("w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=2, ensure_ascii=False)
+
+
+# ── Account helpers ───────────────────────────────────────────────────────
+
+def _hash(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def load_accounts() -> dict:
+    if ACCOUNTS_PATH.exists():
+        with ACCOUNTS_PATH.open(encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+
+def save_accounts(accounts: dict) -> None:
+    with ACCOUNTS_PATH.open("w", encoding="utf-8") as f:
+        json.dump(accounts, f, indent=2, ensure_ascii=False)
+
+
+def accounts_exist() -> bool:
+    return bool(load_accounts())
 
 
 # ── Global state ─────────────────────────────────────────────────────────
@@ -94,6 +118,9 @@ def login_required(f):
         if not session.get("logged_in"):
             if request.is_json or request.path.startswith("/api/") or request.path == "/stream":
                 return jsonify({"error": "Unauthorized"}), 401
+            # No accounts yet → go register first
+            if not accounts_exist():
+                return redirect(url_for("register_page"))
             return redirect(url_for("login_page"))
         return f(*args, **kwargs)
     return wrapped
@@ -101,10 +128,19 @@ def login_required(f):
 
 # ── Pages ────────────────────────────────────────────────────────────────
 
+@app.route("/register")
+def register_page():
+    if session.get("logged_in"):
+        return redirect(url_for("index"))
+    return render_template("register.html")
+
+
 @app.route("/login")
 def login_page():
     if session.get("logged_in"):
         return redirect(url_for("index"))
+    if not accounts_exist():
+        return redirect(url_for("register_page"))
     return render_template("login.html")
 
 
@@ -116,17 +152,47 @@ def index():
 
 # ── Auth API ─────────────────────────────────────────────────────────────
 
+@app.route("/api/register", methods=["POST"])
+def api_register():
+    data = request.json or {}
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+    confirm  = data.get("confirm", "")
+
+    if not username or not password:
+        return jsonify({"success": False, "error": "Username aur password zaroori hain"})
+    if len(username) < 3:
+        return jsonify({"success": False, "error": "Username kam se kam 3 characters ka hona chahiye"})
+    if len(password) < 6:
+        return jsonify({"success": False, "error": "Password kam se kam 6 characters ka hona chahiye"})
+    if password != confirm:
+        return jsonify({"success": False, "error": "Dono passwords match nahi kar rahe"})
+
+    accounts = load_accounts()
+    if username in accounts:
+        return jsonify({"success": False, "error": f"'{username}' username already le liya gaya hai"})
+
+    accounts[username] = _hash(password)
+    save_accounts(accounts)
+    log(f"✅ Naya account ban gaya: {username}")
+    return jsonify({"success": True, "username": username})
+
+
 @app.route("/api/auth", methods=["POST"])
 def auth():
     data = request.json or {}
-    cfg = load_config()
-    web_user = cfg.get("web_user", "admin")
-    web_pass = cfg.get("web_pass", "admin123")
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
 
-    if data.get("username") == web_user and data.get("password") == web_pass:
+    accounts = load_accounts()
+    if not accounts:
+        return jsonify({"success": False, "error": "Pehle account banao /register par"}), 401
+
+    stored = accounts.get(username)
+    if stored and stored == _hash(password):
         session["logged_in"] = True
-        session["username"] = data["username"]
-        return jsonify({"success": True, "username": data["username"]})
+        session["username"] = username
+        return jsonify({"success": True, "username": username})
     return jsonify({"success": False, "error": "Galat username ya password"}), 401
 
 
@@ -412,26 +478,9 @@ def _auto_login() -> None:
         log(f"⚠ Auto-login failed: {exc}", "WARN")
 
 
-# ── Ensure web credentials in config ─────────────────────────────────────
-
-def _ensure_web_creds() -> None:
-    cfg = load_config()
-    changed = False
-    if "web_user" not in cfg:
-        cfg["web_user"] = "admin"
-        changed = True
-    if "web_pass" not in cfg:
-        cfg["web_pass"] = "admin123"
-        changed = True
-    if changed:
-        save_config(cfg)
-        log(f"Web login: user='{cfg['web_user']}' pass='{cfg['web_pass']}'")
-
-
 # ── Main ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    _ensure_web_creds()
     threading.Thread(target=_auto_login, daemon=True).start()
     port = int(os.environ.get("PORT", 5000))
     log(f"🌐 Web UI shuru ho raha hai port {port} par...")

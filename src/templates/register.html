@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prince E2EE Convo — Account Banao</title>
+<style>
+  :root {
+    --bg: #070d07;
+    --card: #0f1a0f;
+    --green: #00e676;
+    --green-glow: 0 0 20px rgba(0,230,118,0.4);
+    --border: #1b3320;
+    --text: #e8f5e9;
+    --text-dim: #66bb6a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-image: radial-gradient(ellipse at 50% 0%, rgba(0,230,118,0.06) 0%, transparent 70%);
+  }
+  .box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 32px 36px;
+    width: 340px;
+    box-shadow: 0 0 40px rgba(0,230,118,0.08), 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .brand { text-align: center; margin-bottom: 24px; }
+  .brand-icon {
+    width: 68px; height: 68px;
+    margin: 0 auto 12px;
+    background: radial-gradient(circle, rgba(0,230,118,0.2) 0%, transparent 70%);
+    border: 2px solid var(--green);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    box-shadow: var(--green-glow);
+  }
+  .brand-name {
+    font-size: 17px; font-weight: 700;
+    color: var(--green);
+    letter-spacing: 1px;
+    text-shadow: 0 0 12px rgba(0,230,118,0.5);
+  }
+  .brand-sub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+  .page-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--text-dim);
+    text-align: center;
+    margin-bottom: 20px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .field { margin-bottom: 13px; }
+  .field label {
+    display: block; font-size: 12px;
+    color: var(--text-dim); margin-bottom: 6px; letter-spacing: 0.5px;
+  }
+  .field input {
+    width: 100%;
+    background: #0a140a;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 11px 14px;
+    color: var(--text); font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field input:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,230,118,0.1); }
+  .field input::placeholder { color: #2e4a2e; }
+  .field-hint { font-size: 11px; color: #2e5234; margin-top: 4px; }
+  .btn-register {
+    width: 100%;
+    background: var(--green); color: #000;
+    border: none; border-radius: 8px;
+    padding: 12px; font-size: 15px; font-weight: 700;
+    cursor: pointer; margin-top: 8px; letter-spacing: 0.5px;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+  }
+  .btn-register:hover { background: #00ff88; box-shadow: 0 0 18px rgba(0,230,118,0.5); }
+  .btn-register:active { transform: scale(0.98); }
+  .btn-register:disabled { opacity: 0.5; cursor: not-allowed; }
+  .msg-box {
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 13px; margin-bottom: 14px; display: none;
+  }
+  .msg-box.err { background: rgba(244,67,54,0.12); border: 1px solid rgba(244,67,54,0.3); color: #ef9a9a; }
+  .msg-box.ok  { background: rgba(0,230,118,0.08); border: 1px solid rgba(0,230,118,0.2);  color: var(--green); }
+  .login-link {
+    text-align: center; margin-top: 20px;
+    font-size: 12px; color: #2e4a2e;
+  }
+  .login-link a { color: var(--green); text-decoration: none; font-weight: 600; }
+  .login-link a:hover { text-decoration: underline; }
+  .footer-credit { text-align: center; margin-top: 16px; font-size: 11px; color: #2e4a2e; }
+  .footer-credit a { color: var(--green); text-decoration: none; }
+  .strength-bar {
+    height: 3px; border-radius: 3px;
+    background: var(--border); margin-top: 6px; overflow: hidden;
+  }
+  .strength-fill {
+    height: 100%; width: 0%; border-radius: 3px;
+    transition: width 0.3s, background 0.3s;
+  }
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="brand">
+    <div class="brand-icon">👁</div>
+    <div class="brand-name">PRINCE E2EE CONVO</div>
+    <div class="brand-sub">Secure Message Sender</div>
+  </div>
+
+  <div class="page-title">✨ Naya Account Banao</div>
+
+  <div class="msg-box" id="msgBox"></div>
+
+  <div class="field">
+    <label>USERNAME</label>
+    <input type="text" id="username" placeholder="Apna username choose karo" autocomplete="username" oninput="clearMsg()">
+    <div class="field-hint">Kam se kam 3 characters</div>
+  </div>
+
+  <div class="field">
+    <label>PASSWORD</label>
+    <input type="password" id="password" placeholder="Strong password daalo" autocomplete="new-password" oninput="checkStrength()">
+    <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+    <div class="field-hint" id="strengthHint">Kam se kam 6 characters</div>
+  </div>
+
+  <div class="field">
+    <label>PASSWORD CONFIRM KARO</label>
+    <input type="password" id="confirm" placeholder="Password dobara daalo" autocomplete="new-password" oninput="clearMsg()">
+  </div>
+
+  <button class="btn-register" id="regBtn" onclick="doRegister()">🚀 Account Banao</button>
+
+  <div class="login-link">
+    Pehle se account hai? <a href="/login">Login karo</a>
+  </div>
+  <div class="footer-credit">Developed by <a href="#">Prince Malhotra</a></div>
+</div>
+
+<script>
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+
+  function checkStrength() {
+    const p = document.getElementById('password').value;
+    const fill = document.getElementById('strengthFill');
+    const hint = document.getElementById('strengthHint');
+    let score = 0;
+    if (p.length >= 6) score++;
+    if (p.length >= 10) score++;
+    if (/[A-Z]/.test(p)) score++;
+    if (/[0-9]/.test(p)) score++;
+    if (/[^A-Za-z0-9]/.test(p)) score++;
+    const pct = (score / 5) * 100;
+    fill.style.width = pct + '%';
+    const colors = ['', '#f44336', '#ff9800', '#ffeb3b', '#8bc34a', '#00e676'];
+    const labels = ['', 'Bahut weak 🔴', 'Weak 🟠', 'Theek hai 🟡', 'Strong 🟢', 'Bahut strong 💚'];
+    fill.style.background = colors[score] || '#f44336';
+    hint.textContent = p.length === 0 ? 'Kam se kam 6 characters' : (labels[score] || 'Weak');
+    clearMsg();
+  }
+
+  function clearMsg() {
+    document.getElementById('msgBox').style.display = 'none';
+  }
+
+  function showMsg(msg, type) {
+    const el = document.getElementById('msgBox');
+    el.textContent = msg;
+    el.className = 'msg-box ' + type;
+    el.style.display = 'block';
+  }
+
+  async function doRegister() {
+    const btn = document.getElementById('regBtn');
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const confirm  = document.getElementById('confirm').value;
+
+    if (!username || !password || !confirm) { showMsg('Sab fields bhar do', 'err'); return; }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Bana raha hai...';
+    try {
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, confirm })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showMsg(`✅ Account ban gaya! Ab login karo...`, 'ok');
+        btn.textContent = '✅ Account Ban Gaya!';
+        setTimeout(() => { window.location.href = '/login'; }, 1500);
+      } else {
+        showMsg(data.error || 'Kuch galat ho gaya', 'err');
+        btn.disabled = false;
+        btn.textContent = '🚀 Account Banao';
+      }
+    } catch (e) {
+      showMsg('Server se connect nahi ho saka', 'err');
+      btn.disabled = false;
+      btn.textContent = '🚀 Account Banao';
+    }
+  }
+</script>
+</body>
+</html>
