@@ -10,3 +10,4 @@ attrs
 paho-mqtt
 pyotp
 requests
+flask

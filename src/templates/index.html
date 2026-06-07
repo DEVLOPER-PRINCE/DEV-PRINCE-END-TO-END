@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prince E2EE Convo</title>
+<style>
+:root {
+  --bg: #070d07;
+  --bg2: #0c150c;
+  --card: #0f1a0f;
+  --card2: #132013;
+  --green: #00e676;
+  --green2: #00c853;
+  --green-glow: rgba(0,230,118,0.25);
+  --green-dim: rgba(0,230,118,0.08);
+  --border: #1b3320;
+  --border2: #234a2a;
+  --text: #e8f5e9;
+  --text-dim: #66bb6a;
+  --text-muted: #2e5234;
+  --btn-start: #00c853;
+  --btn-pause: #f9a825;
+  --btn-loop: #00acc1;
+  --btn-stop: #c62828;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* ── Header ── */
+.header {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  padding: 0 16px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 0 var(--border), 0 2px 12px rgba(0,0,0,0.5);
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-icon {
+  width: 34px; height: 34px;
+  background: radial-gradient(circle, rgba(0,230,118,0.25) 0%, transparent 70%);
+  border: 1.5px solid var(--green);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 12px var(--green-glow);
+  flex-shrink: 0;
+}
+.header-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--green);
+  text-shadow: 0 0 10px rgba(0,230,118,0.4);
+  letter-spacing: 0.5px;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.user-badge {
+  background: var(--green-dim);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-logout {
+  background: #1a2e1a;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text-dim);
+  padding: 5px 14px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-logout:hover { background: #243824; color: var(--text); }
+
+/* ── FB Status badge ── */
+.fb-status {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: color 0.3s;
+}
+.fb-status.online { color: var(--green); }
+.fb-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #2e5234;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.fb-status.online .fb-dot {
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+}
+
+/* ── Main tabs ── */
+.main-tabs {
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+}
+.main-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  padding: 13px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 7px;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+.main-tab:hover { color: var(--text-dim); background: var(--green-dim); }
+.main-tab.active {
+  color: var(--green);
+  border-bottom-color: var(--green);
+  text-shadow: 0 0 10px rgba(0,230,118,0.4);
+}
+
+/* ── Content area ── */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 70px;
+}
+.panel { display: none; }
+.panel.active { display: block; }
+
+/* ── Sub header (profile strip) ── */
+.profile-strip {
+  background: var(--card2);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 12px;
+}
+.profile-avatar {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, #00e676, #006633);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+  border: 2px solid var(--green);
+  box-shadow: 0 0 10px var(--green-glow);
+  font-size: 12px;
+}
+.profile-info { flex: 1; min-width: 0; }
+.profile-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green);
+  text-shadow: 0 0 8px rgba(0,230,118,0.3);
+  letter-spacing: 1px;
+}
+.profile-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Sub-tabs ── */
+.sub-tabs {
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  background: var(--bg2);
+}
+.sub-tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  padding: 11px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  transition: all 0.2s;
+}
+.sub-tab:hover { color: var(--text-dim); background: var(--green-dim); }
+.sub-tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+/* ── Sub panels ── */
+.sub-panel { display: none; padding: 16px; }
+.sub-panel.active { display: block; }
+
+/* ── Form elements ── */
+.field-group { margin-bottom: 16px; }
+.field-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 7px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.field-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+.field-hint .highlight { color: var(--green); font-weight: 600; }
+.inp {
+  width: 100%;
+  background: #0a140a;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 14px;
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.inp:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(0,230,118,0.08); }
+.inp::placeholder { color: var(--text-muted); }
+.inp-sm { padding: 8px 12px; font-size: 13px; }
+textarea.inp {
+  resize: vertical;
+  min-height: 140px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.6;
+}
+select.inp {
+  appearance: none;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%2300e676'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+/* ── Toggle button pair ── */
+.toggle-pair {
+  display: flex;
+  background: #0a140a;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+.toggle-pair button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.toggle-pair button.active {
+  background: var(--green-dim);
+  color: var(--green);
+  border-bottom: 2px solid var(--green);
+}
+
+/* ── Delay slider ── */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.slider-wrap {
+  flex: 1;
+  position: relative;
+}
+input[type=range] {
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  outline: none;
+  border-radius: 4px;
+  appearance: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green-glow);
+  cursor: pointer;
+}
+.delay-val {
+  background: #0a140a;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--green);
+  width: 68px;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* ── Loop toggle ── */
+.loop-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+.loop-label { font-size: 13px; color: var(--text-dim); font-weight: 600; }
+.loop-desc { font-size: 12px; color: var(--text-muted); }
+.toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  flex-shrink: 0;
+}
+.toggle-switch input { display: none; }
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: #1a2e1a;
+  border-radius: 13px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border: 1px solid var(--border);
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #2e5234;
+  top: 2px; left: 2px;
+  transition: all 0.2s;
+}
+.toggle-switch input:checked + .toggle-track { background: var(--green2); border-color: var(--green); }
+.toggle-switch input:checked + .toggle-track::after {
+  left: 24px;
+  background: #fff;
+  box-shadow: 0 0 6px rgba(0,230,118,0.5);
+}
+
+/* ── Auth section ── */
+.auth-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.auth-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 700;
+}
+.badge-auto {
+  background: var(--green);
+  color: #000;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.login-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+.btn-fb-login {
+  width: 100%;
+  background: var(--green);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  padding: 11px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: all 0.2s;
+  letter-spacing: 0.3px;
+}
+.btn-fb-login:hover { background: #00ff88; box-shadow: 0 0 16px rgba(0,230,118,0.4); }
+.btn-fb-login:disabled { opacity: 0.5; cursor: not-allowed; }
+.fb-login-status {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  display: none;
+}
+.fb-login-status.ok { background: rgba(0,230,118,0.08); border: 1px solid rgba(0,230,118,0.2); color: var(--green); }
+.fb-login-status.err { background: rgba(244,67,54,0.08); border: 1px solid rgba(244,67,54,0.25); color: #ef9a9a; }
+
+/* ── Console ── */
+.console-bar {
+  background: var(--card2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.console-bar-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+.tz-badge {
+  background: var(--green-dim);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.auto-scroll-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  background: var(--green-dim);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+.autoscroll-check {
+  width: 14px; height: 14px;
+  border: 1.5px solid var(--green);
+  border-radius: 3px;
+  background: var(--green);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px;
+  color: #000;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.autoscroll-check.off { background: transparent; }
+.btn-clear {
+  margin-left: auto;
+  background: #1a1a0a;
+  border: 1px solid #3a3020;
+  border-radius: 6px;
+  color: #a0896c;
+  padding: 4px 12px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 5px;
+  transition: all 0.2s;
+}
+.btn-clear:hover { background: #2a2510; color: #c9a87c; }
+
+.console-output {
+  height: calc(100vh - 240px);
+  min-height: 200px;
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #a5d6a7;
+  background: var(--bg);
+}
+.console-output .log-line { display: block; word-break: break-all; }
+.console-output .log-line.info { color: #a5d6a7; }
+.console-output .log-line.warn { color: #ffcc02; }
+.console-output .log-line.error { color: #ef9a9a; }
+.console-empty {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+.console-empty-logo {
+  font-size: 44px;
+  margin-bottom: 12px;
+  filter: drop-shadow(0 0 14px rgba(0,230,118,0.5));
+}
+.console-empty-name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: 2px;
+  text-shadow: 0 0 16px rgba(0,230,118,0.6);
+}
+.console-empty-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+.console-empty-hint {
+  font-size: 11px;
+  color: #1a3a1a;
+  margin-top: 10px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.console-wrap { position: relative; }
+
+/* ── Bottom controls ── */
+.bottom-controls {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  padding: 10px 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 99;
+  box-shadow: 0 -2px 20px rgba(0,0,0,0.5);
+}
+.ctrl-btn {
+  flex: 1;
+  border: none;
+  border-radius: 9px;
+  padding: 12px 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: all 0.15s;
+  letter-spacing: 0.3px;
+}
+.ctrl-btn:active { transform: scale(0.96); }
+.ctrl-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-start { background: var(--btn-start); color: #000; }
+.btn-start:hover:not(:disabled) { background: #00e676; box-shadow: 0 0 14px rgba(0,200,83,0.4); }
+.btn-pause { background: var(--btn-pause); color: #000; }
+.btn-pause:hover:not(:disabled) { background: #ffca28; box-shadow: 0 0 14px rgba(249,168,37,0.4); }
+.btn-loop { background: var(--btn-loop); color: #fff; }
+.btn-loop.active { background: #00bcd4; box-shadow: 0 0 12px rgba(0,188,212,0.5); }
+.btn-loop:hover:not(:disabled) { background: #00bcd4; }
+.btn-stop { background: var(--btn-stop); color: #fff; }
+.btn-stop:hover:not(:disabled) { background: #d32f2f; box-shadow: 0 0 14px rgba(198,40,40,0.4); }
+
+/* ── Footer brand ── */
+.footer-brand {
+  text-align: center;
+  padding: 28px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+.footer-logo {
+  width: 56px; height: 56px;
+  margin: 0 auto 10px;
+  background: radial-gradient(circle at 40% 35%, rgba(0,230,118,0.25), transparent 60%);
+  border: 1.5px solid rgba(0,230,118,0.3);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 0 20px rgba(0,230,118,0.15);
+}
+.footer-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--green);
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(0,230,118,0.5);
+}
+.footer-tagline { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.footer-hint { font-size: 11px; color: #1a3a1a; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 4px; }
+.footer-credit { font-size: 11px; color: #1a3a1a; margin-top: 8px; }
+.footer-credit a { color: var(--green); text-decoration: none; }
+
+/* ── Misc ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.section-title { font-size: 11px; font-weight: 700; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 10px; text-transform: uppercase; }
+.msg-count { font-size: 11px; color: var(--text-muted); text-align: right; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header class="header">
+  <div class="header-left">
+    <div class="header-icon">👁</div>
+    <span class="header-title">Prince E2EE Convo</span>
+  </div>
+  <div class="header-right">
+    <div class="fb-status" id="fbStatusBadge">
+      <div class="fb-dot"></div>
+      <span id="fbStatusText">Offline</span>
+    </div>
+    <div class="user-badge">👤 {{ username }}</div>
+    <button class="btn-logout" onclick="doLogout()">Logout</button>
+  </div>
+</header>
+
+<!-- ── Main tabs ── -->
+<div class="main-tabs">
+  <button class="main-tab active" id="tabConfig" onclick="switchMain('config')">⚙️ Config</button>
+  <button class="main-tab" id="tabConsole" onclick="switchMain('console')">🛰 Console</button>
+</div>
+
+<!-- ── Content ── -->
+<div class="content">
+
+  <!-- CONFIG PANEL -->
+  <div class="panel active" id="panelConfig">
+    <!-- Profile strip -->
+    <div class="profile-strip">
+      <div class="profile-avatar" id="profileAvatar">DEV</div>
+      <div class="profile-info">
+        <div class="profile-name">PRINCE E2EE CONVO</div>
+        <div class="profile-sub">Developer · Prince Malhotra</div>
+      </div>
+    </div>
+
+    <!-- Sub-tabs -->
+    <div class="sub-tabs">
+      <button class="sub-tab active" id="stMessages" onclick="switchSub('messages')">💬 Messages</button>
+      <button class="sub-tab" id="stSettings" onclick="switchSub('settings')">⚙️ Settings</button>
+      <button class="sub-tab" id="stCookies" onclick="switchSub('cookies')">🍪 Cookies</button>
+    </div>
+
+    <!-- MESSAGES sub-panel -->
+    <div class="sub-panel active" id="spMessages">
+      <div class="field-group">
+        <div class="field-label">Thread / User ID / Group ID</div>
+        <input class="inp" id="threadId" type="text" placeholder="Facebook ID ya Group Thread ID">
+        <div class="field-hint">User ko DM = unka Facebook ID &nbsp;·&nbsp; Group = thread_fbid</div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Naam <span style="color:var(--text-muted);font-weight:400;">(jo naam likhoge wahi message ke saath jaayega)</span></div>
+        <input class="inp" id="senderName" type="text" placeholder="Apna naam daalo (optional)">
+        <div class="field-hint">💡 Message me <span class="highlight">{name}</span> likhne se wahan replace hoga, warna message ke upar add hoga</div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Message Pack <span style="color:var(--text-muted);font-weight:400;">(ready-made ya apna likho)</span></div>
+        <select class="inp" id="msgPack" onchange="loadPack()">
+          <option value="">📝 Custom — Apne messages likho</option>
+          <option value="hindi_greet">🇮🇳 HINDI — Hindi greetings</option>
+          <option value="english_greet">🇬🇧 ENGLISH — English messages</option>
+          <option value="hindi_love">❤️ HINDI LOVE — Pyaar wale messages</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Messages <span style="color:var(--text-muted);font-weight:400;">(ek line = ek message)</span></div>
+        <textarea class="inp" id="messages" rows="10" placeholder="Yahan apne messages likho...&#10;&#10;Ek line = ek message&#10;{name} likhne se naam replace hoga"></textarea>
+        <div class="msg-count" id="msgCount">0 messages</div>
+      </div>
+    </div>
+
+    <!-- SETTINGS sub-panel -->
+    <div class="sub-panel" id="spSettings">
+      <div class="field-group">
+        <div class="field-label">Delay Between Messages <span style="color:var(--text-muted);font-weight:400;">(seconds)</span></div>
+        <div class="slider-row">
+          <div class="slider-wrap">
+            <input type="range" id="delaySlider" min="1" max="60" value="5" oninput="updateDelay(this.value)">
+          </div>
+          <div class="delay-val" id="delayVal">5 sec</div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <div class="loop-row">
+        <div>
+          <div class="loop-label">Loop Mode</div>
+          <div class="loop-desc" id="loopDesc">Loop OFF — messages ek baar bhejenge</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="loopToggle" onchange="onLoopToggle()">
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <hr class="divider">
+
+      <div class="field-group">
+        <div class="field-label">Platform</div>
+        <select class="inp">
+          <option>Facebook</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Chat Type</div>
+        <div class="toggle-pair">
+          <button id="typeGroup" class="active" onclick="setChatType('group')">👥 Group Thread</button>
+          <button id="typeDM" onclick="setChatType('dm')">💬 User / DM</button>
+        </div>
+        <div class="field-hint" id="chatTypeHint">Group thread mein message jaayega (thread_fbid)</div>
+      </div>
+    </div>
+
+    <!-- COOKIES sub-panel -->
+    <div class="sub-panel" id="spCookies">
+      <div class="auth-header">
+        <div class="auth-title">🔑 Facebook Authentication</div>
+        <span class="badge-auto">AUTO</span>
+      </div>
+
+      <div class="login-card">
+        <div class="toggle-pair">
+          <button id="methodPass" onclick="setAuthMethod('password')">📧 Email + Password</button>
+          <button id="methodCookie" class="active" onclick="setAuthMethod('cookie')">🍪 Cookie String</button>
+        </div>
+
+        <!-- Email/Password fields -->
+        <div id="authPassFields" style="display:none;">
+          <div class="field-hint" style="margin-bottom:10px;">Email + Password daalo — session cookies automatically fetch ho jaayengi</div>
+          <input class="inp inp-sm" id="fbEmail" type="email" placeholder="Facebook Email ya Phone" style="margin-bottom:8px;">
+          <input class="inp inp-sm" id="fbPassword" type="password" placeholder="Facebook Password">
+        </div>
+
+        <!-- Cookie field -->
+        <div id="authCookieField">
+          <div class="field-hint" style="margin-bottom:10px;">Browser se copy ki hui Facebook cookie string paste karo</div>
+          <textarea class="inp inp-sm" id="fbCookies" rows="5" placeholder="c_user=...; xs=...; fr=...; datr=...;"></textarea>
+        </div>
+
+        <button class="btn-fb-login" id="fbLoginBtn" onclick="doFbLogin()">🔐 Facebook Connect Karo</button>
+        <div class="fb-login-status" id="fbLoginStatus"></div>
+      </div>
+    </div>
+
+    <!-- Footer brand inside config -->
+    <div class="footer-brand">
+      <div class="footer-logo">👁</div>
+      <div class="footer-name">PRINCE E2EE CONVO</div>
+      <div class="footer-tagline">Messages ka live status yahaan dikhega</div>
+      <div class="footer-hint">▶ Start dabao aur real-time log dekho</div>
+      <div class="footer-credit">Developed by <a href="#">Prince Malhotra</a></div>
+    </div>
+  </div>
+
+  <!-- CONSOLE PANEL -->
+  <div class="panel" id="panelConsole">
+    <div class="console-bar">
+      <div class="console-bar-title">🛰 Live Console</div>
+      <div class="tz-badge" id="tzBadge">IST · Asia/Kolkata</div>
+      <div class="auto-scroll-toggle" onclick="toggleAutoScroll()">
+        <div class="autoscroll-check" id="autoScrollCheck">✓</div>
+        Auto-scroll
+      </div>
+      <button class="btn-clear" onclick="clearConsole()">🗑 Clear</button>
+    </div>
+    <div class="console-wrap">
+      <div class="console-output" id="consoleOutput">
+        <div class="console-empty" id="consoleEmpty">
+          <div class="console-empty-logo">👁</div>
+          <div class="console-empty-name">PRINCE E2EE CONVO</div>
+          <div class="console-empty-sub">Messages ka live status yahaan dikhega</div>
+          <div class="console-empty-hint">▶ Start dabao aur real-time log dekho</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Bottom controls ── -->
+<div class="bottom-controls">
+  <button class="ctrl-btn btn-start" id="btnStart" onclick="startSending()">▶ Start</button>
+  <button class="ctrl-btn btn-pause" id="btnPause" onclick="pauseSending()" disabled>⏸ Pause</button>
+  <button class="ctrl-btn btn-loop" id="btnLoop" onclick="toggleLoop()">↺ Loop</button>
+  <button class="ctrl-btn btn-stop" id="btnStop" onclick="stopSending()" disabled>■ Stop</button>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let autoScroll = true;
+let chatType = 'group';  // 'group' or 'dm'
+let authMethod = 'cookie';
+let sseSource = null;
+let isRunning = false;
+let isPaused = false;
+let isLoopOn = false;
+
+// ── Message packs ──────────────────────────────────────────────────────────
+const PACKS = {
+  hindi_greet: [
+    "Namaste bhai! 🙏",
+    "Kya haal hai? 😊",
+    "Kaisa chal raha hai zindagi? 🌟",
+    "Bhai tu great hai! 💪",
+    "Teri dosti mujhe bahut pyaari hai ❤️",
+    "Tu sach mein bahut achha insaan hai 😌",
+    "Kabhi milte hain bhai 🤝",
+    "Apna khayal rakhna! 🌙",
+    "Tu mera sabse achha dost hai ❤️",
+    "Jai Hind! 🇮🇳",
+  ],
+  english_greet: [
+    "Hey! How are you? 😊",
+    "Hope you're having a great day! 🌟",
+    "You are awesome! 💪",
+    "Just checking in on you! 🙏",
+    "Thinking of you! ❤️",
+    "Hope everything is going well! ✨",
+    "Stay safe and take care! 🌙",
+    "You matter! Never forget that 💯",
+    "Sending good vibes your way! 🌊",
+    "Have an amazing day ahead! 🔥",
+  ],
+  hindi_love: [
+    "Tujhse pyaar karta hoon {name} ❤️",
+    "Tu meri zindagi hai {name} 💕",
+    "Tere bina adhoora hoon main {name} 💔",
+    "Har pal tujhe yaad karta hoon {name} 🌹",
+    "Tu meri duniya hai {name} 🌍❤️",
+    "Teri aankhein mujhe chain deti hain {name} ✨",
+    "Tere saath har pal khaas lagta hai {name} 💫",
+    "Tu hi meri manzil hai {name} 🎯❤️",
+  ],
+};
+
+// ── Tab switching ──────────────────────────────────────────────────────────
+function switchMain(tab) {
+  document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tabConfig').classList.toggle('active', tab === 'config');
+  document.getElementById('tabConsole').classList.toggle('active', tab === 'console');
+  document.getElementById('panelConfig').classList.toggle('active', tab === 'config');
+  document.getElementById('panelConsole').classList.toggle('active', tab === 'console');
+}
+
+function switchSub(tab) {
+  ['messages','settings','cookies'].forEach(t => {
+    document.getElementById('st' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+    document.getElementById('sp' + t.charAt(0).toUpperCase() + t.slice(1)).classList.toggle('active', t === tab);
+  });
+}
+
+// ── Load message pack ──────────────────────────────────────────────────────
+function loadPack() {
+  const val = document.getElementById('msgPack').value;
+  if (!val) return;
+  const msgs = PACKS[val] || [];
+  document.getElementById('messages').value = msgs.join('\n');
+  updateMsgCount();
+}
+
+function updateMsgCount() {
+  const lines = document.getElementById('messages').value.split('\n').filter(l => l.trim());
+  document.getElementById('msgCount').textContent = `${lines.length} messages`;
+}
+document.getElementById('messages').addEventListener('input', updateMsgCount);
+
+// ── Settings ───────────────────────────────────────────────────────────────
+function updateDelay(val) {
+  document.getElementById('delayVal').textContent = val + ' sec';
+}
+
+function onLoopToggle() {
+  const on = document.getElementById('loopToggle').checked;
+  isLoopOn = on;
+  document.getElementById('loopDesc').textContent = on
+    ? 'Loop ON — messages baar baar bhejte rahenge'
+    : 'Loop OFF — messages ek baar bhejenge';
+  document.getElementById('btnLoop').classList.toggle('active', on);
+}
+
+function setChatType(type) {
+  chatType = type;
+  document.getElementById('typeGroup').classList.toggle('active', type === 'group');
+  document.getElementById('typeDM').classList.toggle('active', type === 'dm');
+  document.getElementById('chatTypeHint').textContent = type === 'dm'
+    ? 'User DM mein jaayega (specific_to_list)'
+    : 'Group thread mein message jaayega (thread_fbid)';
+}
+
+// ── Auth method ─────────────────────────────────────────────────────────────
+function setAuthMethod(method) {
+  authMethod = method;
+  document.getElementById('methodPass').classList.toggle('active', method === 'password');
+  document.getElementById('methodCookie').classList.toggle('active', method === 'cookie');
+  document.getElementById('authPassFields').style.display = method === 'password' ? 'block' : 'none';
+  document.getElementById('authCookieField').style.display = method === 'cookie' ? 'block' : 'none';
+}
+
+// ── Facebook Login ─────────────────────────────────────────────────────────
+async function doFbLogin() {
+  const btn = document.getElementById('fbLoginBtn');
+  const status = document.getElementById('fbLoginStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ Login ho raha hai...';
+  status.style.display = 'none';
+
+  const payload = { method: authMethod };
+  if (authMethod === 'cookie') {
+    payload.cookies = document.getElementById('fbCookies').value.trim();
+  } else {
+    payload.email = document.getElementById('fbEmail').value.trim();
+    payload.password = document.getElementById('fbPassword').value;
+  }
+
+  try {
+    const res = await fetch('/api/fb-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    status.style.display = 'block';
+    if (data.success) {
+      status.className = 'fb-login-status ok';
+      status.textContent = `✅ Facebook connect ho gaya! UID: ${data.uid}`;
+      setFbOnline(data.uid);
+    } else {
+      status.className = 'fb-login-status err';
+      status.textContent = `❌ ${data.error}`;
+    }
+  } catch (e) {
+    status.style.display = 'block';
+    status.className = 'fb-login-status err';
+    status.textContent = '❌ Server error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🔐 Facebook Connect Karo';
+  }
+}
+
+function setFbOnline(uid) {
+  const badge = document.getElementById('fbStatusBadge');
+  badge.classList.add('online');
+  document.getElementById('fbStatusText').textContent = uid ? `UID: ${uid}` : 'Online';
+}
+
+// ── Sending controls ───────────────────────────────────────────────────────
+async function startSending() {
+  const threadId = document.getElementById('threadId').value.trim();
+  const name = document.getElementById('senderName').value.trim();
+  const messages = document.getElementById('messages').value;
+  const delay = parseInt(document.getElementById('delaySlider').value);
+  const loop = document.getElementById('loopToggle').checked;
+  const typeChat = chatType === 'dm' ? 'user' : null;
+
+  const res = await api('/api/start', {
+    thread_id: threadId, name, messages, delay, loop, type_chat: typeChat
+  });
+  if (res.success) {
+    isRunning = true; isPaused = false;
+    updateButtons();
+    switchMain('console');
+    startSSE();
+  } else {
+    alert('❌ ' + res.error);
+  }
+}
+
+async function pauseSending() {
+  const res = await api('/api/pause', {});
+  if (res.success) {
+    isPaused = res.paused;
+    document.getElementById('btnPause').textContent = isPaused ? '▶ Resume' : '⏸ Pause';
+    updateButtons();
+  }
+}
+
+async function stopSending() {
+  const res = await api('/api/stop', {});
+  if (res.success) {
+    isRunning = false; isPaused = false;
+    document.getElementById('btnPause').textContent = '⏸ Pause';
+    updateButtons();
+  }
+}
+
+async function toggleLoop() {
+  const res = await api('/api/loop', {});
+  if (res.success) {
+    isLoopOn = res.loop;
+    document.getElementById('btnLoop').classList.toggle('active', isLoopOn);
+    document.getElementById('loopToggle').checked = isLoopOn;
+    document.getElementById('loopDesc').textContent = isLoopOn
+      ? 'Loop ON — messages baar baar bhejte rahenge'
+      : 'Loop OFF — messages ek baar bhejenge';
+  }
+}
+
+function updateButtons() {
+  document.getElementById('btnStart').disabled = isRunning;
+  document.getElementById('btnPause').disabled = !isRunning;
+  document.getElementById('btnStop').disabled = !isRunning;
+}
+
+// ── SSE console stream ──────────────────────────────────────────────────────
+function startSSE() {
+  if (sseSource) { sseSource.close(); }
+  sseSource = new EventSource('/stream');
+  document.getElementById('consoleEmpty').style.display = 'none';
+
+  sseSource.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    if (data.log) appendLog(data.log);
+    if (data.log && (data.log.includes('Saare messages bhej') || data.log.includes('Worker band'))) {
+      isRunning = false; isPaused = false;
+      document.getElementById('btnPause').textContent = '⏸ Pause';
+      updateButtons();
+    }
+  };
+  sseSource.onerror = function() {
+    setTimeout(startSSE, 3000);
+  };
+}
+
+function appendLog(line) {
+  const out = document.getElementById('consoleOutput');
+  const span = document.createElement('span');
+  span.className = 'log-line';
+  if (line.includes('[ERROR]')) span.classList.add('error');
+  else if (line.includes('[WARN]')) span.classList.add('warn');
+  else span.classList.add('info');
+  span.textContent = line;
+  out.appendChild(span);
+  out.appendChild(document.createElement('br'));
+
+  // Limit to 500 lines
+  const lines = out.querySelectorAll('.log-line');
+  if (lines.length > 500) {
+    lines[0].nextSibling && lines[0].nextSibling.remove();
+    lines[0].remove();
+  }
+
+  if (autoScroll) out.scrollTop = out.scrollHeight;
+}
+
+function clearConsole() {
+  const out = document.getElementById('consoleOutput');
+  out.innerHTML = '<div class="console-empty" id="consoleEmpty"><div class="console-empty-logo">👁</div><div class="console-empty-name">PRINCE E2EE CONVO</div><div class="console-empty-sub">Messages ka live status yahaan dikhega</div><div class="console-empty-hint">▶ Start dabao aur real-time log dekho</div></div>';
+}
+
+function toggleAutoScroll() {
+  autoScroll = !autoScroll;
+  const el = document.getElementById('autoScrollCheck');
+  el.textContent = autoScroll ? '✓' : '';
+  el.classList.toggle('off', !autoScroll);
+}
+
+// ── API helper ──────────────────────────────────────────────────────────────
+async function api(url, body) {
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return await res.json();
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+// ── Logout ──────────────────────────────────────────────────────────────────
+async function doLogout() {
+  await fetch('/api/logout', { method: 'POST' });
+  window.location.href = '/login';
+}
+
+// ── IST Clock ───────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
+  document.getElementById('tzBadge').textContent = `IST ${now} · Asia/Kolkata`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Init: poll status & start SSE ──────────────────────────────────────────
+async function init() {
+  const res = await fetch('/api/status');
+  const data = await res.json();
+  if (data.fb_logged_in) setFbOnline(data.fb_user_id);
+  isRunning = data.running;
+  isPaused = data.paused;
+  isLoopOn = data.loop;
+  document.getElementById('loopToggle').checked = isLoopOn;
+  document.getElementById('btnLoop').classList.toggle('active', isLoopOn);
+  if (isLoopOn) document.getElementById('loopDesc').textContent = 'Loop ON — messages baar baar bhejte rahenge';
+  updateButtons();
+  startSSE();
+}
+
+init();
+</script>
+</body>
+</html>
