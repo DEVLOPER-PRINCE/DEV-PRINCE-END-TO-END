@@ -1,0 +1,1 @@
+- [E2EE bridge build fix](e2ee-bridge-fix.md) — DeleteExpiredPrivacyTokens stub needs `(ctx, time.Time) (int64, error)` signature in store.go
